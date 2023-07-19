@@ -43,15 +43,23 @@ Ex: go run backup_apps.go service-account.json my-org backups
 
 **Para usar o codigo**
 
-em desenvolvimento
+O que faz ? 
 
-Faz o restore do consumerKey e consumerSecret com os seus respectivos products
+- Faz o restore do Apps do arquivo yaml gerado no backup
+- Faz o restore do consumerKey e consumerSecret com os seus respectivos products do arquivo yaml gerado no backup
+- Faz o restore dos custom attributes e apps do arquivo yaml gerado no backup
 
-* Ja existe o restore do developer, precisa primeiro restaurar o developer para depois restaurar as Keys, vou adicionar todos na proximo futuramente
+O que falta fazer ?
 
-Inicialmente precisa apontar o arquivo do yaml 
+- lista dos arquivos de um diretorio e nao apenas de um arquivo
+- validar e se nao existir criar o developer com base no arquivo de app do yaml
 
-**OBS: Falta terminar o restore dos custom attributes, developers e apps.
+
+Informacoes uteis.
+
+* Ja existe o restore do developer entao se nao existir o developer precisa criar inicialmente para depois criar o restore do apps.
+
+* Inicialmente precisa apontar o arquivo do yaml 
 
 ----------------------------------------------------------------------------
 

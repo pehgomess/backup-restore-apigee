@@ -16,7 +16,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type Attribute struct {
+type CustomAttribute struct {
 	Name  string `json:"name" yaml:"name"`
 	Value string `json:"value" yaml:"value"`
 }
@@ -34,8 +34,9 @@ type Credential struct {
 }
 
 type AppBackup struct {
-	AppID          string       `json:"appId" yaml:"appId"`
-	Attributes     []Attribute  `json:"attributes" yaml:"attributes"`
+	AppID      string            `json:"appId" yaml:"appId"`
+	Attributes []CustomAttribute `json:"attributes" yaml:"attributes"`
+	//Attributes     map[string]string `json:"attributes" yaml:"attributes"`
 	CreatedAt      int64        `json:"createdAt" yaml:"createdAt"`
 	Credentials    []Credential `json:"credentials" yaml:"credentials"`
 	DeveloperID    string       `json:"developerId" yaml:"developerId"`
@@ -89,13 +90,7 @@ func main() {
 		log.Fatalf("Erro ao criar o cliente do Apigee: %v", err)
 	}
 
-	// Criar um client HTTP
 	httpClient := oauth2.NewClient(ctx, token.TokenSource)
-
-	// client, err := apigee.NewService(ctx, option.WithHTTPClient(httpClient))
-	// if err != nil {
-	// 	log.Fatalf("Erro ao criar o cliente do Apigee: %v", err)
-	// }
 
 	data, err := os.ReadFile(config.BackupFile)
 	if err != nil {
@@ -113,6 +108,11 @@ func main() {
 		log.Fatal("Nenhuma credencial encontrada no arquivo de backup")
 	}
 
+	err = createApp(service, appBackup, config)
+	if err != nil {
+		log.Fatalf("Erro ao criar o aplicativo %s: %v", appBackup.Name, err)
+	}
+
 	err = createConsumerKeys(httpClient, service, appBackup.DeveloperID, config.Organization, appBackup.Name, credentials)
 	if err != nil {
 		log.Fatalf("Erro ao criar as chaves do aplicativo para o App %s: %v", appBackup.Name, err)
@@ -121,9 +121,35 @@ func main() {
 	fmt.Println("App restaurado com sucesso!")
 }
 
+func createApp(client *apigee.Service, appBackup AppBackup, config Config) error {
+	app := &apigee.GoogleCloudApigeeV1DeveloperApp{
+		Name:       appBackup.Name,
+		Attributes: convertAttributes(appBackup.Attributes),
+	}
+
+	createAppCall := client.Organizations.Developers.Apps.Create("organizations/"+config.Organization+"/developers/"+appBackup.DeveloperID, app)
+	_, err := createAppCall.Do()
+	if err != nil {
+		return fmt.Errorf("erro ao criar o app: %v", err)
+	}
+
+	return nil
+}
+
+func convertAttributes(attributes []CustomAttribute) []*apigee.GoogleCloudApigeeV1Attribute {
+	apiAttributes := make([]*apigee.GoogleCloudApigeeV1Attribute, 0, len(attributes))
+	for _, attr := range attributes {
+		apiAttributes = append(apiAttributes, &apigee.GoogleCloudApigeeV1Attribute{
+			Name:  attr.Name,
+			Value: attr.Value,
+		})
+	}
+	return apiAttributes
+}
+
 func createConsumerKeys(httpClient *http.Client, client *apigee.Service, developerID, org, appName string, credentials []Credential) error {
 	if len(credentials) == 0 {
-		return fmt.Errorf("Nenhuma credencial encontrada no arquivo de backup")
+		return fmt.Errorf("nenhuma credencial encontrada no arquivo de backup")
 	}
 
 	for _, credential := range credentials {
