@@ -127,10 +127,30 @@ func createApp(client *apigee.Service, appBackup AppBackup, config Config) error
 		Attributes: convertAttributes(appBackup.Attributes),
 	}
 
+	// createAppCall := client.Organizations.Developers.Apps.Create("organizations/"+config.Organization+"/developers/"+appBackup.DeveloperID, app)
+	// _, err := createAppCall.Do()
+	// if err != nil {
+	// 	return fmt.Errorf("erro ao criar o app: %v", err)
+	// }
+
 	createAppCall := client.Organizations.Developers.Apps.Create("organizations/"+config.Organization+"/developers/"+appBackup.DeveloperID, app)
-	_, err := createAppCall.Do()
+	newApp, err := createAppCall.Do()
 	if err != nil {
 		return fmt.Errorf("erro ao criar o app: %v", err)
+	}
+
+	if newApp.Credentials != nil {
+		for _, key := range newApp.Credentials {
+			if key.ApiProducts == nil || len(key.ApiProducts) == 0 {
+				deleteKeyCall := client.Organizations.Developers.Apps.Keys.Delete("organizations/" + config.Organization + "/developers/" + appBackup.DeveloperID + "/apps/" + appBackup.Name + "/keys/" + key.ConsumerKey)
+				deleteKeyCall.Context(context.Background())
+				if _, err := deleteKeyCall.Do(); err != nil {
+					return fmt.Errorf("erro ao excluir o token padrão: %v", err)
+				}
+				fmt.Printf("Token padrão do app %s excluído: %s\n", appBackup.Name, key.ConsumerKey)
+			}
+
+		}
 	}
 
 	return nil
